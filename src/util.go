@@ -1,13 +1,16 @@
-// emulator and disassembler for RV32I instructions
+// utils for emulator and disassembler for RV32I instructions
 
 package main
 
-// convert bits to 2's complement
+// convert number in 2's complement format to signed int representation
 func to2(off uint32, bits int) int {
 	var off2 int
-	if (off >= (1 << bits)) { 
-		off  = off - (1<<(bits))
-		off  = ^off & ((1<<bits)-1)
+	// fmt.Printf("off: %x bits: %d %x\n", off, bits, (1<<bits))
+	// if (off >= (1 << bits)) { 
+	if ((off & (1 << (bits))) != 0) { 
+		// off  = off - (1<<(bits))
+		// off  = ^off & ((1<<bits)-1)
+		off  = off ^ ((1<<(bits+1))-1) // invert all bits of number incl. sign
        		off2 = -int(off+1)
 	} else {
 		off2 = int(off)

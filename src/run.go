@@ -31,7 +31,6 @@ func emulate(insn uint32) {
 			regs[rd] = uint32(int(pc) + to2(off, 20))
 
 		case 0b1101111: 
-			// TODO: signeness, *2???
 			mnem = "jal"
 			rd   := (insn & 0b00000000_00000000_00001111_10000000) >>  7
 			off  := (insn & 0b10000000_00000000_00000000_00000000) >> 31 << 20 | 
@@ -39,16 +38,15 @@ func emulate(insn uint32) {
 			        (insn & 0b00000000_00010000_00000000_00000000) >> 20 << 11 |
 			        (insn & 0b00000000_00001111_11110000_00000000) >> 12 << 12 
 			if (rd != 0) { regs[rd] = pc + 4 }
-			pc = pc + uint32(off)
+			pc = uint32(int(pc) + to2(off, 20))
 
 		case 0b1100111: 
-			// TODO: signeness, *2???
 			mnem = "jalr"
 			rd   := (insn & 0b00000000_00000000_00001111_10000000) >>  7
 			rs1  := (insn & 0b00000000_00001111_10000000_00000000) >> 15
 			off  := (insn & 0b11111111_11110000_00000000_00000000) >> 20
 			if (rd != 0) { regs[rd] = pc + 4 }
-			pc = regs[rs1] + uint32(off)
+			pc = uint32(int(regs[rs1]) + to2(off, 20))
 
 		case 0b1100011: 
 			var jump bool = false
@@ -85,13 +83,15 @@ func emulate(insn uint32) {
 
 			switch size {
 				case 0b000: mnem = "lb"
+                        			regs[rd] = uint32(r8(uint32(int(regs[rs1]) + to2(off, 12))))
 				case 0b001: mnem = "lh"
+                        			// regs[rd] = uint32(r16(uint32(int(regs[rs1]) + to2(off, 12))))
 				case 0b010: mnem = "lw"
+                        			regs[rd] = r32(uint32(int(regs[rs1]) + to2(off, 12)))
 				case 0b100: mnem = "lbu"
 				case 0b101: mnem = "lhu"
 				default:    mnem = "l??"
 			}
-                        regs[rd] = r32(uint32(int(regs[rs1]) + to2(off, 11)))
 			pc = pc + 4
 
 		case 0b0100011:
@@ -104,11 +104,13 @@ func emulate(insn uint32) {
           
 			switch size {
 				case 0b000: mnem = "sb"
+                        			w8(uint32(int(regs[rs1]) + to2(off, 12)), uint8(regs[rs2] & 0xff))
 				case 0b001: mnem = "sh"
+                        			// w16(uint32(int(regs[rs1]) + to2(off, 12)), uint16(regs[rs2] & 0xffff))
 				case 0b010: mnem = "sw"
+                        			w32(uint32(int(regs[rs1]) + to2(off, 12)), regs[rs2])
 				default:    mnem = "l??"
 			}
-                        w32(uint32(int(regs[rs1]) + to2(off, 11)), regs[rs2])
 			pc = pc + 4
 
 		case 0b0010011: 
@@ -129,9 +131,9 @@ func emulate(insn uint32) {
 				case 0b000: regs[rd] = uint32(int(regs[rs1]) + off2) // addi
 				case 0b010: mnem = "slti"
 				case 0b011: mnem = "sltiu"
-				case 0b100: mnem = "xori"
-				case 0b110: mnem = "ori"
-				case 0b111: mnem = "andi"
+				case 0b100: regs[rd] = uint32(int(regs[rs1]) ^ off2) // xori
+				case 0b110: regs[rd] = uint32(int(regs[rs1]) | off2) // ori
+				case 0b111: regs[rd] = uint32(int(regs[rs1]) & off2) // andi
 				case 0b001: mnem = "slli"
 				case 0b101: mnem = "srli" // or srai...
 				default:    mnem = "alu??i"
@@ -177,11 +179,11 @@ func emulate(insn uint32) {
 }
 
 func run(addr uint32) {
-	println("Running from", addr)
+	fmt.Printf("Running from %x\n", addr)
 
-	pc = 0x1000
-	regs[2] = 0x100 // initial sp
-	regs[8] = 0x100 // initial fp *HACK*
+	pc = addr
+	regs[2] = 0x10000 // initial sp
+	regs[8] = 0x10000 // initial fp *HACK*
 
 	for {
 		insn := r32(pc)
@@ -194,6 +196,7 @@ func run(addr uint32) {
 
 		regs[0] = 0 // *HACK* r0 is always zero!
 
-		if (insn == 0x8067) { break } // return
+		// if (insn == 0x8067) { break } // return
+		if (pc == 0) { break } 
 	}
 }

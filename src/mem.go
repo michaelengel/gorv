@@ -4,7 +4,7 @@ import "fmt"
 
 // little endian only at the moment!
 
-var mem [65536]uint32
+var mem [256*1024]uint32
 
 func r32(addr uint32) uint32 {
 	// println("Reading address", addr)
