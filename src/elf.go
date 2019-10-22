@@ -54,8 +54,17 @@ func loadelf32(file string) uint32 {
 	        b1 := make([]byte, s.SectionHeader.Size)
 
 		f.ReadAt(b1, int64(s.SectionHeader.Offset))
-	        for index, data := range b1 {
-			w8(uint32(s.SectionHeader.Addr + uint64(index)), data)
+
+		if s.SectionHeader.Addr == 0 {
+			continue
+		} else if s.SectionHeader.Name == ".sbss" { // clear BSS section
+	        	for index, _ := range b1 {
+				w8(uint32(s.SectionHeader.Addr + uint64(index)), 0)
+			}
+		} else {
+	        	for index, data := range b1 {
+				w8(uint32(s.SectionHeader.Addr + uint64(index)), data)
+			}
 		}
 
 	}

@@ -9,9 +9,13 @@ import "strconv"
 var regs [32]uint32
 var pc   uint32
 
+var ninsns uint32 = 0
+
 // emulate given instruction
 func emulate(insn uint32) {
 	var mnem string
+
+	ninsns++
 
 	opcode := insn & 0b00000000_00000000_00000000_01111111
 
@@ -75,7 +79,6 @@ func emulate(insn uint32) {
 			fmt.Printf("****** new pc = %08x off = %08x = %d\n", pc, off, to2(off, 12))
 
 		case 0b0000011:
-			// TODO: transfer sizes, signedness!
 			size := (insn & 0b00000000_00000000_01110000_00000000) >> 12
 			rd   := (insn & 0b00000000_00000000_00001111_10000000) >>  7
 			rs1  := (insn & 0b00000000_00001111_10000000_00000000) >> 15
@@ -84,13 +87,18 @@ func emulate(insn uint32) {
 			switch size {
 				case 0b000: mnem = "lb"
                         			regs[rd] = uint32(r8(uint32(int(regs[rs1]) + to2(off, 12))))
+                        			regs[rd] = uint32(to2(regs[rd], 7))
 				case 0b001: mnem = "lh"
-                        			// regs[rd] = uint32(r16(uint32(int(regs[rs1]) + to2(off, 12))))
+                        			regs[rd] = uint32(r16(uint32(int(regs[rs1]) + to2(off, 12))))
+                        			regs[rd] = uint32(to2(regs[rd], 15))
 				case 0b010: mnem = "lw"
                         			regs[rd] = r32(uint32(int(regs[rs1]) + to2(off, 12)))
 				case 0b100: mnem = "lbu"
+                        			regs[rd] = uint32(r8(uint32(int(regs[rs1]) + to2(off, 12))))
 				case 0b101: mnem = "lhu"
+                        			regs[rd] = uint32(r16(uint32(int(regs[rs1]) + to2(off, 12))))
 				default:    mnem = "l??"
+						fmt.Printf("Unknown load instruction\n")
 			}
 			pc = pc + 4
 
@@ -153,6 +161,7 @@ func emulate(insn uint32) {
 					mnem = "alu??"
 					if (aluop2 == 0b0000000) { regs[rd] = regs[rs1] + regs[rs2] } // add
 					if (aluop2 == 0b0100000) { mnem = "sub" }
+					if (aluop2 == 0b0000001) { regs[rd] = regs[rs1] * regs[rs2] } // mul
 				case 0b001: mnem = "sll"
 				case 0b010: mnem = "slt"
 				case 0b011: mnem = "sltu"
@@ -178,7 +187,7 @@ func emulate(insn uint32) {
 	}
 }
 
-func run(addr uint32) {
+func run(addr uint32) uint32 {
 	fmt.Printf("Running from %x\n", addr)
 
 	pc = addr
@@ -199,4 +208,5 @@ func run(addr uint32) {
 		// if (insn == 0x8067) { break } // return
 		if (pc == 0) { break } 
 	}
+	return uint32(regs[10])
 }

@@ -125,6 +125,7 @@ func disasm(insn uint32) (string, byte) {
 					mnem = "alu??"
 					if (aluop2 == 0b0000000) { mnem = "add" }
 					if (aluop2 == 0b0100000) { mnem = "sub" }
+                                        if (aluop2 == 0b0000001) { mnem = "mul" }
 				case 0b001: mnem = "sll"
 				case 0b010: mnem = "slt"
 				case 0b011: mnem = "sltu"

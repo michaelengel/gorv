@@ -2,6 +2,8 @@
 
 package main
 
+// import "fmt"
+
 // convert number in 2's complement format to signed int representation
 func to2(off uint32, bits int) int {
 	var off2 int

@@ -16,3 +16,8 @@ Changes:
   $ riscv32-unknown-elf-gcc -mabi=ilp32 -march=rv32i -nostdlib -e main -o t t.c 
   and pass name of the generated ELF as command line parameter to the emulator
 
+- 2019-10-18 Clear .sbss section at load time
+
+- 2019-10-22 Fixed memory access bugs, lb/lh sign extension of loaded data
+             Don't load ELF sections with offset = 0
+
