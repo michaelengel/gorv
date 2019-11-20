@@ -1,5 +1,7 @@
 package main
 
+// TODO: endianness - currently assumes a little endian host machine
+
 import (
 	"fmt"
 	"io"
@@ -19,7 +21,7 @@ func ioReader(file string) io.ReaderAt {
 	return r
 }
 
-func loadelf32(file string) uint32 {
+func loadelf32(file string) (uint32, uint32, uint32, uint32) {
 	
 	fmt.Printf("Loading %s\n", file)
 
@@ -47,7 +49,6 @@ func loadelf32(file string) uint32 {
 		os.Exit(1)
 	}
 			
-
 	fmt.Printf("Loading ELF sections:\n")
 	for n, s := range _elf.Sections {
 		fmt.Printf("Section %d Name %s Address %x Offset %x\n", n, s.SectionHeader.Name, s.SectionHeader.Addr, s.SectionHeader.Offset)
@@ -69,6 +70,28 @@ func loadelf32(file string) uint32 {
 
 	}
 
-	return uint32(_elf.Entry)
+	var gp uint32 = 0
+	var bs uint32 = 0 // begin_signature
+	var es uint32 = 0 // end_signature
+
+	fmt.Printf("Loading ELF symbols:\n")
+	sy, _ := _elf.Symbols() 
+	for index, s := range sy {
+		fmt.Printf("Symbol %d name %s\n", index, s.Name)
+		if s.Name == "__global_pointer$" {
+			fmt.Printf("gp = %x\n", s.Value)
+			gp = uint32(s.Value)
+		}
+		if s.Name == "begin_signature" {
+			fmt.Printf("begin_signature = %x\n", s.Value)
+			bs = uint32(s.Value)
+		}
+		if s.Name == "end_signature" {
+			fmt.Printf("end_signature = %x\n", s.Value)
+			es = uint32(s.Value)
+		}
+	}
+
+	return uint32(_elf.Entry), uint32(gp), bs, es
 }
 

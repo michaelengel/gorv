@@ -21,3 +21,19 @@ Changes:
 - 2019-10-22 Fixed memory access bugs, lb/lh sign extension of loaded data
              Don't load ELF sections with offset = 0
 
+- 2019-11-20 gorv now passes 43 of the 55 tests of the riscv-compliance test
+             suite (lots of bugs fixed) and implements the command line 
+             parameters as used by the test suite for the spike simulator. 
+
+             The remaining failed tests are due to several non-implemented 
+             features:
+
+             - CSRxxx and ECALL/EBREAK not yet implemented
+             - SRAI/SRLI not yet implemented
+             - Tests I-MISALIGN_JMP-01 and I-MISALIGN_LDST-01 fail 
+               since exception handling/traps are not yet implemented
+
+             The current version is fixed to executing ELF binaries at
+             0x8000_0000 in order to work with the compliance test suite.
+             Yes, this is a horrible hack :-).
+
