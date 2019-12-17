@@ -140,7 +140,32 @@ func disasm(insn uint32) (string, byte) {
 			}
                         dis  := join(mnem, reg(rd), reg(rs1), reg(rs2))
                         return dis, 'R'
-		case 0b1110011: return "sys", 'I'
+		case 0b1110011: 
+                        fct3 := (insn & 0b00000000_00000000_01110000_00000000) >> 12
+                        imm  := (insn & 0b11111111_11110000_00000000_00000000) >> 20
+                        rd   := (insn & 0b00000000_00000000_00001111_10000000) >>  7
+                        rs1  := (insn & 0b00000000_00001111_10000000_00000000) >> 15
+
+                        switch (fct3) {
+                                // different r/w order in rvbook...
+                                case 0b001: // csrrw
+					mnem = "csrrw"
+                                case 0b010: // csrrs
+					mnem = "csrrs"
+                                case 0b011: // csrrc
+					mnem = "csrrc"
+                                case 0b101: // csrrwi
+					mnem = "csrrwi"
+                                case 0b110: // csrrsi
+					mnem = "csrrsi"
+                                case 0b111: // csrrci
+					mnem = "csrrci"
+                                default: mnem = "illegal"
+                        }
+
+                        dis  := join(mnem, reg(rd), reg(rs1), fmt.Sprintf("0x%x", imm)+" ("+csrnames[imm]+")")
+			return dis, 'I'
+
 		default:        return "unknown", '?'
 	}
 }

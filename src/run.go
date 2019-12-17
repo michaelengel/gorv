@@ -78,11 +78,11 @@ func emulate(insn uint32) {
 				default:    fmt.Printf("Unknown branch condition\n")
 			}
 			if jump == true {
-				pc = uint32(int(pc) + to2(off, 11))
+				pc = uint32(int(pc) + to2(off, 12))
 			} else {
 				pc = pc + 4
 			}
-			fmt.Printf("****** new pc = %08x off = %08x = %d\n", pc, off, to2(off, 11))
+			fmt.Printf("****** new pc = %08x off = %08x = %d\n", pc, off, to2(off, 12))
 
 		case 0b0000011:
 			size := (insn & 0b00000000_00000000_01110000_00000000) >> 12
@@ -133,19 +133,25 @@ func emulate(insn uint32) {
 			aluop :=(insn & 0b00000000_00000000_01110000_00000000) >> 12
 			rd   := (insn & 0b00000000_00000000_00001111_10000000) >>  7
 			rs1  := (insn & 0b00000000_00001111_10000000_00000000) >> 15
+			opt  := (insn & 0b11111110_00000000_00000000_00000000) >> 25
 			off  := (insn & 0b11111111_11110000_00000000_00000000) >> 20
 			offs := (insn & 0b00000001_11110000_00000000_00000000) >> 20 // 5 bit shift offset only
 			off2 = to2(off, 11)
 			switch aluop {
 				case 0b000: regs[rd] = uint32(int(regs[rs1]) + off2) // addi
 				case 0b010: if (to2(regs[rs1], 31) < off2) { regs[rd] = 1 } else { regs[rd] = 0 } // slti
-				case 0b011: fmt.Printf("*** SLTIU %d %d\n", regs[rs1], off)
+				case 0b011: // fmt.Printf("*** SLTIU %d %d\n", regs[rs1], off)
 					if (regs[rs1] < uint32(off2)) { regs[rd] = 1 } else { regs[rd] = 0 } // sltiu XXX
 				case 0b100: regs[rd] = uint32(int(regs[rs1]) ^ off2) // xori
 				case 0b110: regs[rd] = uint32(int(regs[rs1]) | off2) // ori
 				case 0b111: regs[rd] = uint32(int(regs[rs1]) & off2) // andi
 				case 0b001: regs[rd] = regs[rs1] << offs // slli
-				case 0b101: unimp() // srli or srai...
+				case 0b101: // unimp() // srli or srai...
+					if (opt == 0b0000000) { // srli
+						regs[rd] = uint32(uint32(regs[rs1]) >> offs) 
+					} else if (opt == 0b0100000) { // srai
+						regs[rd] = uint32(to2(regs[rs1], 31) >> offs) 
+					} else { illegal() }
 				default:    illegal() // illegal ALU op
 			}
 			pc = pc + 4
@@ -196,7 +202,51 @@ func emulate(insn uint32) {
 		case 0b1110011: // CCC
 			fct3 := (insn & 0b00000000_00000000_01110000_00000000) >> 12
 			imm  := (insn & 0b11111111_11110000_00000000_00000000) >> 20
-			unimp()
+			rd   := (insn & 0b00000000_00000000_00001111_10000000) >>  7
+			rs1  := (insn & 0b00000000_00001111_10000000_00000000) >> 15
+
+			switch (fct3) {
+				case 0b000: // sret, mret, wfi, sfence.vma
+					if ((insn & 0b11111111_11111111_11111111_10000000) ==
+					            0b00010000_00100000_00000000_00000000) { // sret
+					}
+					if ((insn & 0b11111111_11111111_11111111_10000000)  ==
+					            0b00110000_00100000_00000000_00000000) { // mret
+						pc = csr[0x341]-4 // HACK
+					}
+					if ((insn & 0b11111111_11111111_11111111_10000000) ==
+					            0b00010000_01010000_00000000_00000000) { // wfi
+					}
+
+				// different r/w order in rvbook...
+				case 0b001: // csrrw
+					tmp := csr[imm]
+					csr[imm] = regs[rs1]
+					regs[rd] = tmp
+					fmt.Printf("*** csrrw csr[0x%x] = %x\n", imm, csr[imm])
+				case 0b010: // csrrs
+					tmp := csr[imm]
+					csr[imm] = csr[imm] | regs[rs1]
+					regs[rd] = tmp
+					fmt.Printf("*** csrrs csr[0x%x] = %x\n", imm, csr[imm])
+				case 0b011: // csrrc
+					tmp := csr[imm]
+					csr[imm] = csr[imm] & ^regs[rs1]
+					regs[rd] = tmp
+				case 0b101: // csrrwi
+					tmp := csr[imm]
+					csr[imm] = uint32(rs1)
+					regs[rd] = tmp
+				case 0b110: // csrrsi
+					tmp := csr[imm]
+					csr[imm] = csr[imm] | uint32(rs1)
+					regs[rd] = tmp
+				case 0b111: // csrrci
+					tmp := csr[imm]
+					csr[imm] = csr[imm] & ^uint32(rs1)
+					regs[rd] = tmp
+				default: illegal()
+			}
 			pc = pc + 4
 
 		default:        
