@@ -37,3 +37,11 @@ Changes:
              0x8000_0000 in order to work with the compliance test suite.
              Yes, this is a horrible hack :-).
 
+- 2019-12-17 CSR instructions are implemented 
+             gorv now passes 51 of the 55 tests of the riscv-compliance test
+
+             Current deficiencies:
+             - ECALL/EBREAK not yet implemented
+             - Tests I-MISALIGN_JMP-01 and I-MISALIGN_LDST-01 fail 
+               since exception handling/traps are not yet implemented
+
